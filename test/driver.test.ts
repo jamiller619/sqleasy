@@ -33,11 +33,13 @@ describe('sqleasy driver', () => {
     // Test all (multiple rows)
     await db.exec(sql`INSERT INTO test (name) VALUES (${'Bob'})`)
     const rows = await db.all(sql`SELECT * FROM test`)
+
     assert.strictEqual(rows.length, 2, 'all should return two rows')
 
     // Test exec (no result)
     await db.exec(sql`UPDATE test SET name = 'Charlie' WHERE name = 'Alice'`)
     const updated = await db.get<Test>(sql`SELECT * FROM test WHERE id = ${id}`)
+
     assert.strictEqual(updated?.name, 'Charlie', 'exec should update the row')
   })
 })
