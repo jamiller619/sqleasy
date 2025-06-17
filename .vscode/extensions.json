@@ -1,3 +1,6 @@
 {
-  "recommendations": ["Prisma.prisma"] // For syntax highlighting in sql template tags
+  "recommendations": [
+    // For syntax highlighting in sql template tags
+    "frigus02.vscode-sql-tagged-template-literals-syntax-only"
+  ]
 }
