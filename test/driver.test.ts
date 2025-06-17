@@ -11,26 +11,32 @@ type Test = {
 describe('sqleasy driver', async () => {
   test('should handle basic operations', async () => {
     const db = await connect()
-    const id = await db.run(sql`INSERT INTO test (name) VALUES (${'Alice'})`)
+    const id = await db.run(/* sql */ `
+      INSERT INTO test (name) VALUES ('Alice')
+    `)
 
     assert.strictEqual(typeof id, 'number', 'run should return a number')
 
     // Test get (single row)
-    const row = await db.get<Test>(
-      sql`SELECT * FROM test WHERE name = ${'Alice'}`,
-    )
+    const row = await db.one<Test>(/* sql */ `
+      SELECT * FROM test WHERE name = 'Alice'
+    `)
+
     assert.ok(row, 'get should return a row')
     assert.strictEqual(row.name, 'Alice', 'row name should be Alice')
 
     // Test all (multiple rows)
-    await db.exec(sql`INSERT INTO test (name) VALUES (${'Bob'})`)
-    const rows = await db.all(sql`SELECT * FROM test`)
+    await db.exec(/* sql */ `INSERT INTO test (name) VALUES ('Bob')`)
+    const rows = await db.many(sql`SELECT * FROM test`)
 
     assert.strictEqual(rows.length, 2, 'all should return two rows')
 
     // Test exec (no result)
-    await db.exec(sql`UPDATE test SET name = 'Charlie' WHERE name = 'Alice'`)
-    const updated = await db.get<Test>(sql`SELECT * FROM test WHERE id = ${id}`)
+    await db.exec(/* sql */ `
+      UPDATE test SET name = 'Charlie' WHERE name = 'Alice'
+    `)
+
+    const updated = await db.one<Test>(sql`SELECT * FROM test WHERE id = ${id}`)
 
     assert.strictEqual(updated?.name, 'Charlie', 'exec should update the row')
   })
@@ -38,14 +44,66 @@ describe('sqleasy driver', async () => {
   test('should close the database connection', async () => {
     const db = await connect()
 
-    await db.run(sql`INSERT INTO test (name) VALUES (${'Test'})`)
+    await db.run(/* sql */ `
+      INSERT INTO test (name) VALUES ('Test')
+    `)
+
     await db.close()
 
     // After closing, further queries should fail
     await assert.rejects(
-      () => db.run(sql`INSERT INTO test (name) VALUES (${'ShouldFail'})`),
+      () =>
+        db.run(/* sql */ `
+          INSERT INTO test (name) VALUES ('ShouldFail')
+        `),
       /SQLITE_MISUSE/,
       'run after close should throw SQLITE_CLOSED error',
+    )
+  })
+
+  test('should work with both sql template tags and string queries and params', async () => {
+    const db = await connect()
+
+    // Using sql template tag
+    const id1 = await db.run(sql`INSERT INTO test (name) VALUES (${'Alice'})`)
+    assert.strictEqual(
+      typeof id1,
+      'number',
+      'run with sql tag should return a number',
+    )
+
+    // Using string query
+    const id2 = await db.run(
+      /* sql */ `INSERT INTO test (name) VALUES (?)`,
+      'Bob',
+    )
+    assert.strictEqual(
+      typeof id2,
+      'number',
+      'run with string query should return a number',
+    )
+
+    // Verify both rows exist
+    const rows = await db.many<Test>(/* sql */ `SELECT * FROM test ORDER BY id`)
+    assert.strictEqual(rows.length, 2, 'both rows should be inserted')
+  })
+
+  test('should stream query results', async () => {
+    const db = await connect()
+    await db.run(sql`INSERT INTO test (name) VALUES (${'Alice'}), (${'Bob'})`)
+
+    const rows: Test[] = []
+    const stream = db.stream<Test>(sql`SELECT * FROM test ORDER BY id`)
+
+    for await (const row of stream) {
+      rows.push(row)
+    }
+
+    assert.strictEqual(rows.length, 2, 'stream should yield two rows')
+    assert.deepStrictEqual(
+      rows.map((r) => r.name),
+      ['Alice', 'Bob'],
+      'streamed names should match inserted values',
     )
   })
 })

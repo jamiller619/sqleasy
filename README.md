@@ -7,7 +7,8 @@ A minimal, type-friendly async wrapper for SQLite using `sql-template-tag` and `
 - Async API for SQLite
 - TypeScript support with generics for query results
 - Schema initialization support
-- Uses tagged template literals for safe SQL queries
+- Uses tagged template literals or string queries and parameter substitution for safe SQL queries
+- Includes a streaming interface for large result sets
 
 ## Installation
 
@@ -46,16 +47,23 @@ import db from './db.ts'
 
 type User = { id: number; name: string }
 
-// Insert a user
-const userId = await db.run(sql`INSERT INTO users (name) VALUES (${'Alice'})`)
+// Insert a user using query strings and parameter substitution
+const userId = await db.run(`INSERT INTO users (name) VALUES (?)`, 'Alice')
 
-// Query a single user
-const user = await db.get<User>(
+// Query a single user with sql tagged template literals
+const user = await db.one<User>(
   sql`SELECT * FROM users WHERE name = ${'Alice'}`,
 )
 
 // Query all users
-const users = await db.all<User>(sql`SELECT * FROM users`)
+const users = await db.many<User>('SELECT * FROM users')
+
+// Stream users
+const userStream = db.stream<User>('SELECT * FROM users')
+
+for (const user of userStream) {
+  console.log(user.name)
+}
 ```
 
 ## API
@@ -68,15 +76,17 @@ Initializes the SQLite database. Optionally runs a schema SQL string. Returns a 
 
 A class that wraps a SQLite database connection and provides async methods:
 
-- `run(sql: Sql): Promise<number>` — Executes a SQL statement and resolves with the last inserted row ID.
-- `exec(sql: Sql): Promise<void>` — Executes a SQL statement without returning a result.
-- `get<R>(sql: Sql): Promise<R | undefined>` — Fetches a single row from the database.
-- `all<R>(sql: Sql): Promise<R[]>` — Fetches all rows from the database.
+- `exec(sql: string): Promise<void>` — Executes a SQL statement without returning a result.
+- `run(sql: Sql | string, ...values: any[]): Promise<number>` — Executes a SQL statement and resolves with the last inserted row ID.
+- `one<R>(sql: Sql | string, ...values: any[]): Promise<R | undefined>` — Fetches a single row from the database.
+- `many<R>(sql: Sql | string, ...values: any[]): Promise<R[]>` — Fetches all rows from the database.
+- `stream<R>(sql: Sql | string, ...values: any[]): DatabaseStream<R>` — Returns a stream of rows for the given SQL query.
 
 ## TypeScript Support
 
 - All methods are fully typed.
-- Use generics to specify the result row type for `get` and `all`.
+- Use generics to specify the result row type for `one`,
+  `many` and `stream`.
 
 ## License
 
