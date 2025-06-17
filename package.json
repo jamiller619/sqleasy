@@ -1,0 +1,30 @@
+{
+  "name": "sqleasy",
+  "version": "0.0.1",
+  "main": "index.ts",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=23.6.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write ."
+  },
+  "precommit": "lint, format, test",
+  "peerDependencies": {
+    "sql-template-tag": "^5.2.1",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.3",
+    "@typescript-eslint/parser": "^8.34.1",
+    "eslint": "^9.29.0",
+    "pre-commit": "^1.2.2",
+    "prettier": "^3.5.3",
+    "sql-template-tag": "^5.2.1",
+    "sqlite3": "^5.1.7",
+    "typescript": "^5.8.3"
+  }
+}
