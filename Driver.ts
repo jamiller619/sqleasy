@@ -78,4 +78,18 @@ export default class Driver {
       })
     })
   }
+
+  /**
+   * Closes the database connection.
+   * @throws {Error} If the database connection cannot be closed.
+   * @returns {Promise<void>} Promise resolving when the database connection is closed.
+   */
+  close(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.#db.close((err) => {
+        if (err) reject(err)
+        else resolve()
+      })
+    })
+  }
 }
