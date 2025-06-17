@@ -1,6 +1,6 @@
 # sqleasy
 
-A minimal, type-friendly async wrapper for SQLite3 using `sql-template-tag` and `sqlite3` for Node.js/TypeScript projects.
+A minimal, type-friendly async wrapper for SQLite using `sql-template-tag` and `sqlite3` for Node.js/TypeScript projects.
 
 ## Features
 
