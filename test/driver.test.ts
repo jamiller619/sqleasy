@@ -13,7 +13,7 @@ describe('sqleasy driver', () => {
     // Use in-memory database for testing
     const connect = await sqleasy(
       ':memory:',
-      `CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT);`,
+      /* sql */ ` CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT);`,
     )
 
     const db = connect()
