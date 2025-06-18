@@ -15,13 +15,9 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
-    "declaration": true,
-    "declarationMap": true,
     "sourceMap": true,
     "removeComments": false,
     "resolveJsonModule": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
     "noEmit": true,
     "allowImportingTsExtensions": true
   },

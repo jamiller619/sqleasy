@@ -1,6 +1,6 @@
 import assert from 'node:assert'
 import sql from 'sql-template-tag'
-import sqleasy, { type Driver } from '../index.ts'
+import sqleasy, { type Driver } from '../src/index.ts'
 import { describe, test } from 'node:test'
 
 type Test = {
