@@ -16,7 +16,8 @@
     "test": "node --test test/*.test.ts",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write .",
-    "build": "node scripts/build.ts"
+    "build": "node scripts/build.ts",
+    "prepare": "yarn build"
   },
   "precommit": "lint, format, test",
   "peerDependencies": {
