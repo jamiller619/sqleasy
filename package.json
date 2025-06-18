@@ -16,7 +16,7 @@
     "test": "node --test test/*.test.ts",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write .",
-    "build": "node scripts/build.ts",
+    "build": "tsx scripts/build.ts",
     "postinstall": "yarn build"
   },
   "precommit": "lint, format, test",
@@ -34,6 +34,7 @@
     "prettier": "^3.5.3",
     "sql-template-tag": "^5.2.1",
     "sqlite3": "^5.1.7",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   }
 }
