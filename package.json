@@ -16,8 +16,8 @@
     "test": "node --test test/*.test.ts",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write .",
-    "build": "npx tsx scripts/build.ts",
-    "postinstall": "npm run build"
+    "build": "yarn tsx scripts/build.ts",
+    "postinstall": "yarn install && yarn build"
   },
   "precommit": "lint, format, test",
   "peerDependencies": {
