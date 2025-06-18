@@ -17,7 +17,7 @@
     "lint": "eslint . --ext .ts",
     "format": "prettier --write .",
     "build": "yarn tsx scripts/build.ts",
-    "postinstall": "yarn install && yarn build"
+    "prepack": "yarn build"
   },
   "precommit": "lint, format, test",
   "peerDependencies": {
