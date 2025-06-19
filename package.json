@@ -1,7 +1,7 @@
 {
   "name": "sqleasy",
   "description": "A minimal, type-friendly async wrapper for SQLite using `sql-template-tag` and `sqlite3` for Node.js/TypeScript projects.",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "main": "dist/index.js",
   "license": "MIT",
   "type": "module",
