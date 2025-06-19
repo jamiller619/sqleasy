@@ -1,6 +1,6 @@
 import { Readable } from 'node:stream'
 import { Sql } from 'sql-template-tag'
-import sqlite from 'sqlite3'
+import * as sqlite from 'sqlite3'
 
 /**
  * DatabaseStream streams the results of a prepared SQLite statement as a Node.js readable stream.
@@ -32,6 +32,7 @@ export default class DatabaseStream<T> extends Readable {
    * @private
    */
   #stmt: sqlite.Statement
+  #currentRow = 0
 
   /**
    * Creates a new DatabaseStream instance.
@@ -59,9 +60,21 @@ export default class DatabaseStream<T> extends Readable {
         this.destroy(err)
 
         return
-      } else {
-        this.push(result || null)
       }
+
+      if (!result) {
+        this.push(null)
+
+        return
+      }
+
+      this.#currentRow += 1
+      this.push(result)
     })
+  }
+
+  // Helper method to get row count (optional)
+  getProcessedRowCount(): number {
+    return this.#currentRow
   }
 }

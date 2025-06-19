@@ -27,7 +27,7 @@ describe('sqleasy driver', async () => {
 
     // Test all (multiple rows)
     await db.exec(/* sql */ `INSERT INTO test (name) VALUES ('Bob')`)
-    const rows = await db.many(sql`SELECT * FROM test`)
+    const rows = await db.many<Test>(sql`SELECT * FROM test`)
 
     assert.strictEqual(rows.length, 2, 'all should return two rows')
 
@@ -105,6 +105,37 @@ describe('sqleasy driver', async () => {
       ['Alice', 'Bob'],
       'streamed names should match inserted values',
     )
+  })
+
+  test('should return the number of processed rows', async () => {
+    const db = await connect()
+
+    for (let i = 0; i < 200; i += 1) {
+      await db.run(sql`INSERT INTO test (name) VALUES (${'Bob' + i})`)
+    }
+
+    const count = await db.run(sql`SELECT COUNT(*) FROM test`)
+
+    assert.strictEqual(
+      count,
+      200,
+      'should return the number of inserted rows (200)',
+    )
+
+    const stream = db.stream<Test>(sql`SELECT * FROM test`)
+
+    let s = 0
+    for await (const _ of stream) {
+      s += 1
+
+      if (s >= 50) {
+        stream.destroy()
+
+        break
+      }
+    }
+
+    assert.strictEqual(stream.getProcessedRowCount(), s)
   })
 })
 

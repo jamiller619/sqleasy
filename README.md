@@ -1,21 +1,22 @@
 # sqleasy
 
-A minimal, type-friendly async wrapper for SQLite using `sql-template-tag` and `sqlite3` for Node.js/TypeScript projects.
+A minimal, type-friendly async wrapper for SQLite and `sqlite3` for Node.js/TypeScript projects.
 
 ## Features
 
 - Async API for SQLite
-- TypeScript support with generics for query results
-- Schema initialization support
-- Uses tagged template literals or string queries and parameter substitution for safe SQL queries
 - Includes a streaming interface for large result sets
+- TypeScript support with generics for query results
+- Implements explicit resource management (i.e. `await using` syntax)
+- Schema initialization support
+- Supports two APIs for safe SQL queries, tagged template literals (ala `sql-template-tag`) and string queries with parameter substitution
 
 ## Installation
 
-> Don't forget to install the `sqlite3` and `sql-template-tag` dependencies!
+> Don't forget to install `sqlite3`!
 
 ```
-npm install jamiller619/sqleasy sqlite3 sql-template-tag
+npm install jamiller619/sqleasy sqlite3
 ```
 
 ## Usage
@@ -36,7 +37,8 @@ const connect = await sqleasy(
 `,
 )
 
-export default connect()
+// export default connect()
+await using db = connect()
 ```
 
 Now you can reference your db from anywhere in your project:
@@ -80,7 +82,9 @@ A class that wraps a SQLite database connection and provides async methods:
 - `run(sql: Sql | string, ...values: any[]): Promise<number>` — Executes a SQL statement and resolves with the last inserted row ID.
 - `one<R>(sql: Sql | string, ...values: any[]): Promise<R | undefined>` — Fetches a single row from the database.
 - `many<R>(sql: Sql | string, ...values: any[]): Promise<R[]>` — Fetches all rows from the database.
-- `stream<R>(sql: Sql | string, ...values: any[]): DatabaseStream<R>` — Returns a stream of rows for the given SQL query.
+- `stream<R>(sql: Sql | string, ...values: any[]): DatabaseStream<R>` — Returns a stream for the given SQL query.
+- `close(): Promise<void>` — Closes the underlying database.
+  Can be used with Explicit Resource Management syntax, i.e. `using`.
 
 ## TypeScript Support
 

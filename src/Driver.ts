@@ -1,11 +1,10 @@
-import type { Sql } from 'sql-template-tag'
 import sqlite from 'sqlite3'
+import { Sql } from 'sql-template-tag'
 import DatabaseStream from './DatabaseStream.ts'
 
 /**
- * Driver class for executing SQL statements using sqlite3.
- * This class wraps the sqlite3 Database instance and provides methods
- * to run SQL commands asynchronously.
+ * Driver provides async and streaming methods for interacting with a SQLite database.
+ * Supports both sql-template-tag and raw SQL as strings with parameters.
  */
 export default class Driver {
   /**
@@ -22,29 +21,37 @@ export default class Driver {
     this.#db = db
   }
 
+  async [Symbol.asyncDispose]() {
+    await this.close()
+  }
+
   /**
-   * Streams the results of an SQL query as a Node.js readable stream.
+   * Streams the results of a SQLite query as an async iterable.
    *
    * @template R The expected row type.
-   * @param {Sql|string} sql - The SQL statement to execute.
-   * @param {...unknown} values - If the `sql` parameter is a string, this will be used as values.
-   * @returns {NodeJS.ReadableStream} A readable stream emitting rows of type T.
+   * @param {Sql|string} sql - The SQL statement or sql-template-tag object.
+   * @param {...unknown} values - Optional values for parameterized queries.
+   * @returns {AsyncIterable<R>} An async iterable yielding rows of type R.
    */
-  stream<R>(sql: Sql | string, ...values: unknown[]): AsyncIterable<R> {
-    const query = typeof sql === 'string' ? { text: sql, values } : sql
+  stream<R>(sql: Sql): DatabaseStream<R>
+  stream<R>(sql: string, ...values: unknown[]): DatabaseStream<R>
+  stream<R>(sql: unknown, ...values: unknown[]): DatabaseStream<R> {
+    const query = parseArgs(sql, ...values)
 
     return new DatabaseStream<R>(this.#db, query.text, ...query.values)
   }
 
   /**
-   * Executes a SQL statement and resolves with the last inserted row ID.
-   * @param {Sql|string} sql - The SQL statement to execute.
-   * @param {...unknown} values - If the `sql` parameter is a string, this will be used as values.
+   * Executes a SQLite statement and resolves with the last inserted row ID.
+   *
+   * @param {Sql|string} sql - The SQL statement or sql-template-tag object.
+   * @param {...unknown} values - Optional values for parameterized queries.
    * @returns {Promise<number>} Promise resolving to the last inserted row ID.
    */
-  run(sql: Sql | string, ...values: unknown[]): Promise<number> {
-    const query = typeof sql === 'string' ? { text: sql, values } : sql
-
+  run(sql: Sql): Promise<number>
+  run(sql: string, ...values: unknown[]): Promise<number>
+  run(sql: unknown, ...values: unknown[]): Promise<number> {
+    const query = parseArgs(sql, ...values)
     return new Promise<number>((resolve, reject) => {
       this.#db.run(query.text, query.values, function (err) {
         if (err) reject(err)
@@ -54,11 +61,17 @@ export default class Driver {
   }
 
   /**
-   * Executes a SQL statement without returning any result.
+   * Executes a SQLite statement without returning any result.
+   *
    * @param {string} sql - The SQL statement to execute.
+   * @param {...unknown} args - Should be empty; throws if not.
    * @returns {Promise<void>} Promise resolving when execution is complete.
+   * @throws {TypeError} If extra arguments are provided.
    */
-  exec(sql: string): Promise<void> {
+  exec(sql: string, ...args: unknown[]): Promise<void> {
+    if (args.at(0) != null) {
+      throw new TypeError('')
+    }
     return new Promise<void>((resolve, reject) => {
       this.#db.exec(sql, (err) => {
         if (err) reject(err)
@@ -69,32 +82,36 @@ export default class Driver {
 
   /**
    * Fetches a single row from the database.
+   *
    * @template R
-   * @param {Sql|string} sql - The SQL statement to execute.
-   * @param {...unknown} values - If the `sql` parameter is a string, this will be used as values.
+   * @param {Sql|string} sql - The SQL statement or sql-template-tag object.
+   * @param {...unknown} values - Optional values for parameterized queries.
    * @returns {Promise<R | undefined>} Promise resolving to the row or undefined.
    */
-  one<R>(sql: Sql | string, ...values: unknown[]): Promise<R | undefined> {
-    const query = typeof sql === 'string' ? { text: sql, values } : sql
-
-    return new Promise<R | undefined>((resolve, reject) => {
-      this.#db.get(query.text, query.values, (err, row) => {
+  one<R>(sql: Sql): Promise<R | undefined>
+  one<R>(sql: string, ...values: unknown[]): Promise<R | undefined>
+  one<R>(sql: unknown, ...values: unknown[]): Promise<R | undefined> {
+    const query = parseArgs(sql, ...values)
+    return new Promise((resolve, reject) => {
+      this.#db.get<R>(query.text, query.values, (err, row) => {
         if (err) reject(err)
-        else resolve(row as R | undefined)
+        else resolve(row)
       })
     })
   }
 
   /**
    * Fetches all rows from the database.
+   *
    * @template R
-   * @param {Sql|string} sql - The SQL statement to execute.
-   * @param {...unknown} values - If the `sql` parameter is a string, this will be used as values.
+   * @param {Sql|string} sql - The SQL statement or sql-template-tag object.
+   * @param {...unknown} values - Optional values for parameterized queries.
    * @returns {Promise<R[]>} Promise resolving to an array of rows.
    */
-  many<R>(sql: Sql | string, ...values: unknown[]): Promise<R[]> {
-    const query = typeof sql === 'string' ? { text: sql, values } : sql
-
+  many<R>(sql: Sql): Promise<R[]>
+  many<R>(sql: string, ...values: unknown[]): Promise<R[]>
+  many<R>(sql: unknown, ...values: unknown[]): Promise<R[]> {
+    const query = parseArgs(sql, ...values)
     return new Promise<R[]>((resolve, reject) => {
       this.#db.all(query.text, query.values, (err, rows) => {
         if (err) reject(err)
@@ -105,15 +122,57 @@ export default class Driver {
 
   /**
    * Closes the database connection.
-   * @throws {Error} If the database connection cannot be closed.
    * @returns {Promise<void>} Promise resolving when the database connection is closed.
    */
   close(): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       this.#db.close((err) => {
         if (err) reject(err)
         else resolve()
       })
     })
   }
+}
+
+/**
+ * Parses SQL arguments for Driver methods, supporting both sql-template-tag and raw SQL.
+ *
+ * @param {Sql|string|unknown} sql - The SQL statement or sql-template-tag object.
+ * @param {...unknown} values - Optional values for parameterized queries.
+ * @returns {Sql} The parsed SQL object with text and values.
+ * @throws {Error} If parameters are invalid.
+ */
+function parseArgs(
+  sql: Sql | string | unknown,
+  ...values: unknown[]
+): { text: string; values: unknown[] } {
+  if (typeof sql === 'string') {
+    return {
+      text: sql,
+      values,
+    }
+  } else if (isSqlType(sql)) {
+    const { text, values } = sql
+
+    return {
+      text,
+      values: values || [],
+    }
+  }
+
+  throw new Error('Invalid parameters')
+}
+
+function isSqlType(sql: unknown): sql is { text: string; values?: unknown[] } {
+  if (sql == null) return false
+
+  if (
+    typeof sql === 'object' &&
+    'text' in sql &&
+    typeof sql.text === 'string'
+  ) {
+    return true
+  }
+
+  return false
 }
